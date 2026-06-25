@@ -4,7 +4,7 @@ Cross-session memory plugin for OpenCode. Persists memories, checkpoints, and co
 
 ## Features
 
-- **Persistent Memory** — Save and recall memories across OpenCode sessions (14,000+ memories from June 2026)
+- **Persistent Memory** — Save and recall memories across OpenCode sessions.
 - **Automatic Checkpointing** — Creates checkpoints on risky operations, session end, and context rollover
 - **Context Compaction** — Automatically compacts long conversations with distillation (93% token reduction)
 - **Semantic Search** — Vector-based memory search using pgvector
