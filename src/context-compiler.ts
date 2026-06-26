@@ -40,10 +40,12 @@ function classifyPart(
   if (STEP_TYPES.includes(part.type)) return 'step_type';
   if (part.type === 'tool' && (part.state?.status === 'completed' || part.state?.type === 'completed')) {
     if (estimateTokens(String(part.state.output ?? '')) > 100) return 'compressible';
+    if (msgIndex < totalMsgs - recentWindow * 2) return 'compressible';
     return 'short_tool_output';
   }
   if (part.type === 'text') {
     if (estimateTokens(String(part.text ?? '')) > 200) return 'compressible';
+    if (msgIndex < totalMsgs - recentWindow * 3) return 'compressible';
     return 'short_text';
   }
   return 'other';
@@ -91,7 +93,7 @@ function compressToolOutput(part: any): CompressedPartDetail | null {
   const meta = toolRiskAndSignals(tool, input, before);
   return {
     kind: `tool_${tool}`, source: input.filePath ?? input.command ?? input.pattern ?? '',
-    reason: meta.reason, beforeTokens: before, afterTokens: after,
+    reason: before > 100 ? meta.reason : 'old_short_tool_output', beforeTokens: before, afterTokens: after,
     compressionRatio: before > 0 ? after / before : 0, preservedSignals: meta.signals, risk: meta.risk,
   };
 }

@@ -177,4 +177,24 @@ describe('Phase 5 — Context Compiler', () => {
     assert.equal(result.mode, 'deep');
     assert.equal(result.budget, 75000);
   });
+
+  it('9. compresses old short tool outputs when budget is tight', () => {
+    const shortOutputs = Array.from({ length: 30 }, (_, i) =>
+      toolPart('bash', `result ${i}: ok`, `/old/file${i}.ts`)
+    );
+    const messages = [
+      msg('user', [textPart('start')]),
+      msg('assistant', shortOutputs),
+      ...Array.from({ length: 5 }, (_, i) => fillerMsg(i)),
+      msg('user', [textPart('continue')]),
+      msg('assistant', [textPart('done')]),
+    ];
+    const result = compileContext(messages, {
+      ...DEFAULT_CONFIG,
+      modes: { cheap: 50, normal: 50, deep: 50 },
+      defaultMode: 'normal',
+      recentTurnWindow: 2,
+    });
+    assert.ok(result.partsCompressed > 0, `expected compressed parts, got ${result.partsCompressed}`);
+  });
 });

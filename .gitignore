@@ -11,4 +11,5 @@ dist
 .DS_Store
 coverage
 *.tsbuildinfo
-.opencode
+.opencodeopencode
+opencode
