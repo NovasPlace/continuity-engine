@@ -118,9 +118,12 @@ export interface Memory {
   updatedAt: Date;
   accessedAt: Date;
   accessCount: number;
-  lastAccessedAt?: Date;
-  archivedAt?: Date;
-}
+    lastAccessedAt?: Date;
+    archivedAt?: Date;
+    recallCount?: number;
+    graphLinks?: number;
+    qualityScore?: number;
+  }
 
 export interface MemoryChunk {
   id: number;
@@ -329,13 +332,13 @@ export interface CumulativeCompactionStats {
   }
 
   export const DEFAULT_COMPACTION_QUALITY_CONFIG: CompactionQualityConfig = {
-    entityRetentionWeight: 0.35,
-    decisionRetentionWeight: 0.25,
-    warningErrorRetentionWeight: 0.25,
-    semanticSimilarityWeight: 0.15,
-    qualityThreshold: 0.6,
-    embeddingDriftWarningThreshold: 0.3,
-  };
+      entityRetentionWeight: 0.35,
+      decisionRetentionWeight: 0.25,
+      warningErrorRetentionWeight: 0.25,
+      semanticSimilarityWeight: 0.15,
+      qualityThreshold: 0.6,
+      embeddingDriftWarningThreshold: 0.3,
+    };
 
   export interface DistillerConfig {
   enabled: boolean;
@@ -453,3 +456,76 @@ export interface DatabaseClient {
   query: (text: string, params?: unknown[]) => Promise<{ rows: unknown[]; rowCount: number | null }>;
   release: () => void;
 }
+
+export type PruneRiskLevel = 'low' | 'medium' | 'high';
+
+export interface PruneSignal {
+  ageDays: number;
+  importance: number;
+  recallCount: number;
+  graphLinks: number;
+  entityDensity: number;
+  qualityScore: number;
+  sessionRelevance: number;
+}
+
+export interface PruneCandidate {
+  memoryId: number;
+  action: 'would_archive';
+  riskLevel: PruneRiskLevel;
+  reason: string;
+  tokensSaved: number;
+  signals: PruneSignal;
+  protected: boolean;
+  protectionReasons: string[];
+}
+
+export interface PruneReport {
+  candidates: PruneCandidate[];
+  totalCandidates: number;
+  totalTokensSaved: number;
+  riskDistribution: { low: number; medium: number; high: number };
+  protectedCount: number;
+  prunableCount: number;
+  dryRun: boolean;
+}
+
+export interface PruneConfig {
+  dryRun: boolean;
+  maxAgeDays: number;
+  minImportanceThreshold: number;
+  minRecallCountForProtection: number;
+  minGraphLinksForProtection: number;
+  recentAccessDays: number;
+  qualityScoreThreshold: number;
+  maxCandidates: number;
+  ageWeight: number;
+  importanceWeight: number;
+  recallWeight: number;
+  graphWeight: number;
+  entityDensityWeight: number;
+  sessionRelevanceWeight: number;
+  qualityWeight: number;
+  protectedPenalty: number;
+  threshold: number;
+}
+
+export const DEFAULT_PRUNE_CONFIG: PruneConfig = {
+  dryRun: true,
+  maxAgeDays: 90,
+  minImportanceThreshold: 0.3,
+  minRecallCountForProtection: 3,
+  minGraphLinksForProtection: 3,
+  recentAccessDays: 7,
+  qualityScoreThreshold: 0.6,
+  maxCandidates: 100,
+  ageWeight: 0.2,
+  importanceWeight: 0.25,
+  recallWeight: 0.2,
+  graphWeight: 0.15,
+  entityDensityWeight: 0.05,
+  sessionRelevanceWeight: 0.05,
+  qualityWeight: 0.1,
+  protectedPenalty: 0.1,
+  threshold: 0.5,
+};

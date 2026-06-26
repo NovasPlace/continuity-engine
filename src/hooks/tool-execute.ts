@@ -1,6 +1,23 @@
 import type { PluginContext } from '../plugin-context.js';
 import type { ToolCallRecord } from '../types.js';
-import { queueDocUpdate, flushDocUpdates } from './auto-docs.js';
+import { queueDocUpdate, flushDocUpdates, getPendingUpdates } from './auto-docs.js';
+
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+const FLUSH_DELAY_MS = 2000;
+
+function scheduleDocFlush(ctx: PluginContext): void {
+  if (flushTimer) clearTimeout(flushTimer);
+  flushTimer = setTimeout(async () => {
+    flushTimer = null;
+    if (getPendingUpdates().length > 0) {
+      try {
+        await flushDocUpdates(ctx);
+      } catch (err) {
+        console.error('[CrossSessionMemory] Auto-doc flush error:', err);
+      }
+    }
+  }, FLUSH_DELAY_MS);
+}
 
 /**
  * tool.execute.before — Fires before any tool call.
@@ -164,6 +181,7 @@ async function logToolUsage(
   if (input.tool === 'write' || input.tool === 'edit') {
     const filePath = input.args?.filePath ?? input.args?.path ?? 'unknown';
     queueDocUpdate(filePath, input.tool === 'write' ? 'write' : 'edit');
+      scheduleDocFlush(ctx);
     await ctx.memoryManager.saveMemory({
       content: `File ${input.tool === 'write' ? 'written' : 'edited'}: ${filePath}`,
       type: 'episodic',

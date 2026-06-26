@@ -6,6 +6,8 @@ import { EmbeddingGenerator } from './embeddings.js';
 import { extractConcepts } from './concept-extractor.js';
 import { buildLinksForMemory, findSharedEntities } from './memory-graph.js';
 import { hybridSearch, DEFAULT_WEIGHTS, type HybridWeights } from './hybrid-search.js';
+import { pruneMemories } from './prune-scorer.js';
+import { DEFAULT_PRUNE_CONFIG } from './types.js';
 import {
   Memory,
   MemoryType,
@@ -16,6 +18,8 @@ import {
   MemoryListOptions,
   Session,
   SortBy,
+  PruneConfig,
+  PruneReport,
 } from './types.js';
 
 export class MemoryManager {
@@ -625,5 +629,39 @@ async saveMemory(options: MemorySaveOptions): Promise<Memory> {
       accessedAt: row.accessed_at as Date,
       accessCount: row.access_count as number,
     };
+  }
+
+  async pruneMemories(config?: Partial<PruneConfig>): Promise<PruneReport> {
+    const pool = this.database.getPool();
+    const fullConfig = { ...DEFAULT_PRUNE_CONFIG, ...config };
+
+    const result = await pool.query(`
+      SELECT m.*,
+        COALESCE(g.link_count, 0) AS graph_links,
+        COALESCE(r.recall_count, 0) AS recall_count
+      FROM memories m
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*) AS link_count
+        FROM memory_graph
+        WHERE source_id = m.id OR target_id = m.id
+      ) g ON true
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*) AS recall_count
+        FROM memory_events
+        WHERE memory_id = m.id AND event_type = 'recall'
+      ) r ON true
+      ORDER BY m.created_at ASC
+    `);
+
+    const memories: Memory[] = result.rows.map((row: unknown) => {
+      const r = row as Record<string, unknown>;
+      return {
+        ...this.mapMemory(r),
+        graphLinks: r.graph_links as number,
+        recallCount: r.recall_count as number,
+      };
+    });
+
+    return pruneMemories(memories, fullConfig);
   }
 }

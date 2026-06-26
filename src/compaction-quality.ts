@@ -17,8 +17,8 @@ const ENTITY_PATTERNS = [
 ];
 
 const DECISION_PATTERNS = [
-  /(?:decided|decision|chose|chosen|opted|selected|prefer|should|must|will|shall)\s+(?:to\s+)?[\w\s,]+/gi,
-  /(?:because|since|as|given that|reason|rational|justification)[:\s]+[\w\s,]+/gi,
+  /(?:decided|decision|chose|chosen|opted|selected|prefer|should|must|will|shall)[:\s]+(?:to\s+)?[\w\s,]+/gi,
+  /(?:because|since|as|given that|reason|rationale|justification)[:\s]+[\w\s,]+/gi,
   /(?:important|critical|essential|mandatory|required|necessary)[:\s]+[\w\s,]+/gi,
 ];
 
