@@ -19,6 +19,7 @@
 | `src/concept-extractor.ts` | extractConcepts | concept | LLM-based concept extraction |
 | `src/hybrid-search.ts` | hybridSearch, vectorSearch, fullTextSearch, entityMatchBoost | search | RRF-based hybrid search (vector + text + entity) |
 | `src/compaction-quality.ts` | measureCompactionQuality, extractEntities, extractDecisions, extractWarningsErrors, computeRetention | metrics | Compaction quality scoring (entity/decision/error retention + drift) |
+| `src/prune-scorer.ts` | pruneMemories, isProtectedMemory_, computeAgeDays_, computeEntityDensity_, computePruneScore_, buildPruneReport_ | prune | Multi-signal prune scoring with protection rules (dry-run only) |
 
 ## Context Pipeline
 

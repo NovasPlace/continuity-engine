@@ -121,6 +121,7 @@ FROM memory_concepts mc GROUP BY mc.concept ORDER BY links DESC LIMIT 20;
 | auto-docs | 20 | No | Doc queue, flush, dedup |
 | compaction | 13 | No | Tool output compression |
 | compaction-quality | 34 | No | Entity/decision/error retention |
+| prune-scorer | 36 | No | Dry-run prune: multi-signal scoring + protection |
 | context-compiler | 8 | No | Context budget, pinning |
 | hybrid-search | 7 | Yes (PostgreSQL) | Vector+text+entity RRF |
 | goal | 5 | Yes (PostgreSQL) | Goal tracking |

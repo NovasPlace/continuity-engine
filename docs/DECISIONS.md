@@ -109,6 +109,12 @@
 
 ### 18. Doc-Analyzer Dedup + Stub Filtering (Phase 11+)
 - **Decision**: `doc-analyzer.ts` must check: (1) entry doesn't already exist for same file, (2) file has real exports/imports (not a stub), (3) file exists on disk
+
+### 19. Dry-Run Only Prune (Phase 13)
+- **Decision**: `memory_prune` is dry-run only, no destructive operations
+- **Why**: Memory hygiene is dangerous without safeguards; archived data can't be recovered
+- **Signals**: age + importance + recall + graph + entity density + session relevance
+- **Protection**: decisions, errors, rollback, security, code entities, high connectivity, recent access
 - **Why**: Previous version produced 530-line SYSTEM_MAP.md full of `src/a.ts`, `src/new-feature.ts` stubs
 - **Trade-off**: Doc updates are slower (disk reads); some legitimate stubs won't appear
 - **Status**: ✅ Implemented — `isStubContent()`, `isIgnoredForAnalysis()`, dedup in `applyDocUpdate()`
