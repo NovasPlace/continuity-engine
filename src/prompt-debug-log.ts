@@ -7,15 +7,22 @@ type PromptMessageLike = {
 };
 
 function summarizePart(part: Record<string, unknown>, index: number) {
+  const text = typeof part.text === 'string' ? part.text : undefined;
+  const toolOutput = typeof part.state === 'object' && part.state
+    ? (part.state as { output?: unknown }).output
+    : undefined;
   return {
     index,
     type: part.type,
     id: part.id,
     sessionID: part.sessionID,
     messageID: part.messageID,
-    textLength: typeof part.text === 'string' ? part.text.length : undefined,
+    textLength: text?.length,
+    textPreview: text?.slice(0, 200),
     tool: part.tool,
     stateStatus: typeof part.state === 'object' && part.state ? (part.state as { status?: unknown }).status : undefined,
+    toolOutputLength: typeof toolOutput === 'string' ? toolOutput.length : undefined,
+    toolOutputPreview: typeof toolOutput === 'string' ? toolOutput.slice(0, 200) : undefined,
     metadataKeys: typeof part.metadata === 'object' && part.metadata
       ? Object.keys(part.metadata as Record<string, unknown>)
       : [],

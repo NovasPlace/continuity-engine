@@ -1,10 +1,12 @@
 import { compileContext } from './context-compiler.js';
 import { DEFAULT_GOVERNOR_CONFIG, getGovernorProfile } from './context-governor-profiles.js';
 import { measureGovernorMetrics } from './context-governor-monitor.js';
+import { optimizeGovernorContext } from './context-governor-optimizer.js';
 import {
   buildCheckpointDistilledState,
   buildCheckpointRefSummary,
 } from './context-governor-checkpoint.js';
+import { estimateSlopeGrowth } from './context-governor-slope.js';
 import type {
   GovernorActionName,
   GovernorConfig,
@@ -120,7 +122,9 @@ export class AdaptiveContextGovernor {
 
   govern(messages: MessageLike[], profileName?: GovernorProfileName): GovernorResult {
     const profile = getGovernorProfile(this.governorConfig, profileName);
-    const before = measureGovernorMetrics(messages, profile.projectedGrowth);
+    const slopeGrowth = estimateSlopeGrowth(messages);
+    const projectedGrowth = profile.projectedGrowth + slopeGrowth;
+    const before = measureGovernorMetrics(messages, projectedGrowth);
     const action = chooseAction(before.totalTokens, before.projectedNextTurnTokens, profile.maxBudget);
     const decision: GovernorDecision = {
       profile: profile.name,
@@ -131,15 +135,16 @@ export class AdaptiveContextGovernor {
       overBudget: before.totalTokens > profile.maxBudget,
     };
     const rebuildApplied = applyAction(messages, action);
+    optimizeGovernorContext(messages, profile.recentTurnWindow);
     const compileResult = compileContext(
       messages,
       buildCompilerConfig(
         this.compilerConfig,
-        compileBudget(decision.budget, profile.projectedGrowth),
+        compileBudget(decision.budget, projectedGrowth),
         profile.recentTurnWindow,
       ),
     );
-    const after = measureGovernorMetrics(messages, profile.projectedGrowth);
+    const after = measureGovernorMetrics(messages, projectedGrowth);
     return {
       metricsBefore: before,
       metricsAfter: after,

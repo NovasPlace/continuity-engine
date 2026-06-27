@@ -74,12 +74,34 @@ function trunc(text: string, maxTokens: number): string {
     : text;
 }
 
-export function buildCheckpointRefSummary(messages: MessageLike[]): string {
+function queryTerms(messages: MessageLike[]): string[] {
+  return messages
+    .slice(-3)
+    .flatMap((message) => message.parts ?? [])
+    .map((part) => String(part.text ?? part.state?.output ?? '').toLowerCase())
+    .join(' ')
+    .match(/[a-z][a-z0-9_./-]{2,}/g)
+    ?.slice(0, 20) ?? [];
+}
+
+function rankedRefs(messages: MessageLike[]) {
   const checkpoint = buildPayload(messages);
-  const refs = checkpoint.sourceRefs
+  const terms = queryTerms(messages);
+  return checkpoint.sourceRefs
+    .map((ref) => ({
+      ref,
+      score: terms.some((term) => `${ref.kind} ${ref.note} ${ref.toolCallId ?? ''}`.toLowerCase().includes(term)) ? 2 : 0,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .map((item) => item.ref);
+}
+
+export function buildCheckpointRefSummary(messages: MessageLike[]): string {
+  const refs = rankedRefs(messages)
     .slice(0, 8)
     .map((ref) => `[CHECKPOINT_REF] role=${ref.role} kind=${ref.kind} note=${ref.note}`)
     .join('\n');
+  const checkpoint = buildPayload(messages);
   const summary = trunc(checkpoint.summaryMarkdown, 220);
   return `${factHeader(messages)}\n${summary}\n${refs || '[CHECKPOINT_REF] none available'}`.trim();
 }
