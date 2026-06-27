@@ -205,3 +205,10 @@ Self-continuity records can surface naturally in silent mode, and later sessions
 - **Implementation**: `PhaseNarrativeBuilder` + `buildPhaseNarrative()` + `formatPhaseNarrative()` in `src/self-continuity-phase-narrative.ts`, wired into `SelfContinuityIntegration`.
 - **Test results**: 11 narrative tests (105 total across all suites)
 - **Status**: ✅ LOCKED
+
+### 28. Value Source Guard — Phase 28 ✅ LOCKED
+- **Decision**: Distinguish "known user values" (explicitly stored as preference memories) from "inferred user values" (deduced from project arc). Self-models get dangerous when they treat inferred preferences as confirmed facts.
+- **Why**: Session G showed the agent claiming to know "your values" including benchmark rigor and silent injection preference. If those were inferred from the project arc, not stored as explicit preference memories, they should be labeled as inferred.
+- **Implementation**: `classifyValueClaim`, `guardValueSources`, `detectUnlabeledInferences` in `src/value-source-guard.ts`. Tags each value claim with source ('known' | 'inferred'), evidence, and confidence. Detects unlabeled inferences in text.
+- **Test results**: 7 value-source tests (113 total across all suites)
+- **Status**: ✅ LOCKED

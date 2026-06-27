@@ -30,6 +30,10 @@ This plugin gives an AI assistant long-term memory. Without it, every new sessio
 - **Auto-checkpointing** - Queues checkpoints before risky operations.
 - **Checkpoint markdown** - Renders checkpoints into readable summaries for debugging and handoff.
 
+### Value Source Guard (Phase 28)
+- **Known vs inferred values** - Distinguishes explicitly stored user preferences from values inferred from the project arc. Prevents self-models from treating inferences as confirmed facts.
+- **Classification** - `classifyValueClaim`, `guardValueSources`, `detectUnlabeledInferences`. Tags each value claim with source ('known' | 'inferred'), evidence, and confidence.
+
 ### Phase Narrative Builder (Phase 27)
 - **Causal chain reconstruction** - Connects phases 21-26 into a narrative: problem → action → result → downstream change. Turns index-card continuity into narrative continuity.
 - **Causation anchors** - Uses real A/D/E experiment results as fixtures. Session D proved silent recall → Phase 22 drift tracking → Phase 23 evidence hydration → Phase 24 causal threads → Phase 25 depth scoring → Phase 26 integration.
@@ -84,7 +88,7 @@ This plugin gives an AI assistant long-term memory. Without it, every new sessio
 
 ## Test Suite
 
-Current source of truth is the test runner output. The suite includes fresh-schema and Phase 19b integration coverage for clean installs, explicit backfill, and hashed recall telemetry. 105 tests total across 16 suites.
+Current source of truth is the test runner output. The suite includes fresh-schema and Phase 19b integration coverage for clean installs, explicit backfill, and hashed recall telemetry. 113 tests total across 17 suites.
 
 | Suite | What It Covers |
 |-------|----------------|

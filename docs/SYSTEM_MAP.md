@@ -6,6 +6,16 @@
 
 | File | Exports | Type | Role |
 |------|---------|------|------|
+| `src/value-source-guard.ts` | ValueSource, TaggedValue, ValueSourceGuardResult, detectUnlabeledInferences, classifyValueClaim, guardValueSources | source | Module |
+| `src/self-drift-types.ts` | DriftVerdict, DriftDimension, DriftDimensionScore, DriftResult, AnchorFixture, STABILITY_SIGNALS, DRIFT_SIGNALS, BOUNDARY_SIGNALS | source | Module |
+| `src/self-drift-tracker.ts` | measureDrift | source | Module |
+| `src/self-drift-anchors.ts` | SESSION_A_ANCHOR, SESSION_D_ANCHOR, SESSION_E_ANCHOR, ALL_ANCHORS | source | Module |
+| `src/self-continuity-phase-narrative.ts` | PhaseCausationNode, PhaseCausationLink, PhaseNarrativeResult, PhaseNarrativeBuilder, buildPhaseNarrative, formatPhaseNarrative | source | Module |
+| `src/self-continuity-integration.ts` | IntegratedRecord, IntegratedRecallResult, IntegratedRecallOptions, HydrateFn, ThreadHydrateFn, SelfContinuityIntegration | source | Memory & recall subsystem |
+| `src/self-continuity-hydrator.ts` | HydratedSelfContinuityRecord, HydrationResult, SelfContinuityHydrator | source | Module |
+| `src/self-continuity-causal-thread.ts` | CausalRole, CausalLinkType, CausalThreadNode, CausalThreadGap, CausalThreadResult, HydrateCausalThreadOptions, classifyRole, CausalThreadHydrator, hydrateCausalThread | source | Module |
+| `src/hydration-depth-types.ts` | HydrationDimension | source | Module |
+| `src/hydration-depth-tracker.ts` | measureHydrationDepth | source | Module |
 | `src/self-continuity-types.ts` | SelfContinuityTriggerType, SimilarityMethod, DriftLevel, IdentityDrift, SelfContinuityRecord, InjectionMode, SelfContinuityDebugTelemetry, ContinuityConfidenceInput, CONTINUITY_CONFIDENCE_WEIGHTS, SelfContinuityConfig, DEFAULT_SELF_CONTINUITY_CONFIG | source | Module |
 | `src/self-continuity-schema.ts` | initializeSelfContinuitySchema | source | SQL schema |
 | `src/self-continuity-generator.ts` | SelfContinuityGenerator | source | Module |
