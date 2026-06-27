@@ -30,6 +30,17 @@ This plugin gives an AI assistant long-term memory. Without it, every new sessio
 - **Auto-checkpointing** - Queues checkpoints before risky operations.
 - **Checkpoint markdown** - Renders checkpoints into readable summaries for debugging and handoff.
 
+### Behavioral Growth Tracking (Phase 30)
+- **Memory → behavior change** - Tracks whether recalled lessons/memories actually change agent behavior across sessions.
+- **7 growth categories**: loop_prevention, schema_lesson_application, boundary_adherence, causal_depth_improvement, repo_fact_reuse, drift_correction, hydration_depth_improvement.
+- **Growth metrics**: event count, category breakdown, baseline comparison, overall growth score.
+- **Proof target**: "The system grows from what it remembers" — not just "the system remembers."
+
+### Response Mode Selector (Phase 29)
+- **Adaptive depth** - Auto-selects 'basic' (boundary-only) or 'deep' (boundary + evidence + causal chain + narrative arc) based on available hydration context.
+- **Drivers**: record count, thread presence, phase narrative, user hints ('deep', 'narrative', 'why', 'how')
+- **Graceful fallback** — deep mode degrades to basic when context insufficient.
+
 ### Value Source Guard (Phase 28)
 - **Known vs inferred values** - Distinguishes explicitly stored user preferences from values inferred from the project arc. Prevents self-models from treating inferences as confirmed facts.
 - **Classification** - `classifyValueClaim`, `guardValueSources`, `detectUnlabeledInferences`. Tags each value claim with source ('known' | 'inferred'), evidence, and confidence.
@@ -88,7 +99,7 @@ This plugin gives an AI assistant long-term memory. Without it, every new sessio
 
 ## Test Suite
 
-Current source of truth is the test runner output. The suite includes fresh-schema and Phase 19b integration coverage for clean installs, explicit backfill, and hashed recall telemetry. 113 tests total across 17 suites.
+Current source of truth is the test runner output. The suite includes fresh-schema and Phase 19b integration coverage for clean installs, explicit backfill, and hashed recall telemetry. 133 tests total across 18 suites.
 
 | Suite | What It Covers |
 |-------|----------------|

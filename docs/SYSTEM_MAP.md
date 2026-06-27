@@ -6,6 +6,10 @@
 
 | File | Exports | Type | Role |
 |------|---------|------|------|
+| `src/behavioral-growth-tracker.ts` | GrowthCategory, GrowthEventOutcome, GrowthEvent, GrowthMetrics, BehavioralGrowthTracker | source | Module |
+| `src/behavioral-growth-tracker-types.ts` | GrowthCategory, GrowthEventOutcome, BaselineComparison, RecalledMemory, GrowthEvent, CategoryMetrics, GrowthMetrics, BehavioralGrowthTracker | source | Memory & recall subsystem |
+| `src/behavioral-growth-tracker-impl.ts` | InMemoryBehavioralGrowthTracker | source | Memory & recall subsystem |
+| `src/response-mode-selector.ts` | ResponseMode, ModeSelection, selectResponseMode, FormattedResponse, formatBasicResponse, formatDeepResponse, selectAndFormat | source | Module |
 | `src/value-source-guard.ts` | ValueSource, TaggedValue, ValueSourceGuardResult, detectUnlabeledInferences, classifyValueClaim, guardValueSources | source | Module |
 | `src/self-drift-types.ts` | DriftVerdict, DriftDimension, DriftDimensionScore, DriftResult, AnchorFixture, STABILITY_SIGNALS, DRIFT_SIGNALS, BOUNDARY_SIGNALS | source | Module |
 | `src/self-drift-tracker.ts` | measureDrift | source | Module |

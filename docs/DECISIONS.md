@@ -212,3 +212,18 @@ Self-continuity records can surface naturally in silent mode, and later sessions
 - **Implementation**: `classifyValueClaim`, `guardValueSources`, `detectUnlabeledInferences` in `src/value-source-guard.ts`. Tags each value claim with source ('known' | 'inferred'), evidence, and confidence. Detects unlabeled inferences in text.
 - **Test results**: 7 value-source tests (113 total across all suites)
 - **Status**: ✅ LOCKED
+
+### 29. Response Mode Selector — Phase 29 ✅ LOCKED
+- **Decision**: Add a response mode selector that escalates from basic (boundary-only) to deep (boundary + evidence + causal chain + narrative arc) based on available hydration context.
+- **Why**: Agents defaulted to safe baseline even when richer context was available from Phases 23-27.
+- **Implementation**: `selectResponseMode`, `formatBasicResponse`, `formatDeepResponse`, `selectAndFormat` in `src/response-mode-selector.ts`. Mode selection driven by records count, thread count, phase narrative presence, and user hint keywords.
+- **Test results**: 8 mode-selector tests (121 total across all suites)
+- **Status**: ✅ LOCKED
+
+### 30. Behavioral Growth Tracking — Phase 30 ✅ LOCKED
+- **Decision**: Track whether recalled memories and lessons actually change agent behavior across sessions.
+- **Why**: Moving from "system remembers" to "system grows from what it remembers" — the Artificial Growing Intelligence proof.
+- **Categories tracked**: loop_prevention, schema_lesson_application, boundary_adherence, causal_depth_improvement, repo_fact_reuse, drift_correction, hydration_depth_improvement
+- **Metrics**: growth events logged, category breakdown, baseline comparison, overall growth score
+- **Test results**: 12 tests passing (133 total across all suites)
+- **Status**: ✅ LOCKED
