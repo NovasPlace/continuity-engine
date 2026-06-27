@@ -2,6 +2,14 @@
 
 ## Development Log
 
+### 2026-06-27 — Phase 24 LOCKED: Causal Thread Hydration
+- `CausalThreadHydrator` class: hydrateCausalThread({ memoryId, sessionId?, radius?, ... })
+- Role classification: lesson → decision → downstream_change → result → action → problem → unknown
+- Distinguishes causal links (memory_links type=causal/reference) from temporal adjacency
+- Explicit gap reporting: missing_diff, missing_reason, missing_result, broken_link
+- Token budget enforced (default 2000 chars), graceful failure (never blocks)
+- Tests: 16/16 passing (73 total across all suites)
+
 ### 2026-06-27 — Phase 23 LOCKED: Self-Continuity Evidence Hydration
 - `SelfContinuityHydrator` class: getRecordById, hydrateRecord, recallWithHydration, formatAllForInjection
 - Canonical fields: record_id, created_at, trigger_type, self_observation, evidence_anchors, continuity_gap, confidence_score, drift_summary, similarity_method

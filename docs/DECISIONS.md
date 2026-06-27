@@ -165,3 +165,15 @@ Self-continuity records can surface naturally in silent mode, and later sessions
 - **API**: `SelfContinuityHydrator.getRecordById(pool, recordId, projectId)` fetches one record; `hydrateRecord(record)` formats canonical fields; `recallWithHydration(pool, projectId, limit)` recalls and hydrates; `formatAllForInjection(records)` renders injectable text.
 - **Trade-off**: Adds one DB lookup + redaction per hydration; graceful fallback means failures degrade to no injection, never crash.
 - **Status**: ✅ LOCKED — 11 tests passing (57 total across all suites)
+
+### 24. Causal Thread Hydration — Phase 24 ✅ LOCKED
+- **Decision**: Reconstruct the causal thread around a recalled memory/event — problem → action → result → decision → lesson → downstream change — using memory_links, temporal adjacency, lessons, decisions, and self-continuity records.
+- **Why**: The system had landmarks but not the path between landmarks. "I know README was modified" is index-card continuity; "I know the edit was garbled, the fix was applied, and the downstream reason was Phase 23 evidence hydration" is narrative continuity.
+- **API**: `CausalThreadHydrator.hydrateCausalThread({ memoryId, sessionId?, projectId?, radius?, includeToolEvents?, includeDecisions?, includeLessons? })`
+- **Returns**: `{ rootMemoryId, thread: [{ memoryId, eventType, role, summary, evidenceAnchors, confidence, timestamp }], gaps, confidence, reconstructionSummary }`
+- **Role classification**: classifyRole() uses pattern matching with priority order: lesson → decision → downstream_change → result → action → problem → unknown.
+- **Temporal vs causal**: A memory_link of type 'causal' or 'reference' implies a causal relationship; pure temporal adjacency (same session, nearby timestamps) is a weaker signal and marked lower confidence.
+- **Gap reporting**: Broken chains report explicit gaps (`missing_diff`, `missing_reason`, `missing_result`, `broken_link`) instead of hallucinating links.
+- **Limits**: Max token budget enforced (default 2000 chars); max radius (default 3); failure falls back to empty thread (never blocks); redaction still applies.
+- **Test results**: 16 tests passing (73 total across all suites) — full chain, broken chain, partial chain, role classification, redaction, budget enforcement, graceful failure.
+- **Status**: ✅ LOCKED — 16 tests passing (73 total across all suites)

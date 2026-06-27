@@ -30,6 +30,13 @@ This plugin gives an AI assistant long-term memory. Without it, every new sessio
 - **Auto-checkpointing** - Queues checkpoints before risky operations.
 - **Checkpoint markdown** - Renders checkpoints into readable summaries for debugging and handoff.
 
+### Causal Thread Hydration (Phase 24)
+- **Narrative continuity** - Reconstructs the causal thread around a recalled memory: problem → action → result → decision → lesson → downstream change.
+- **Causal vs temporal** - Distinguishes causal links (memory_links type=causal/reference) from pure temporal adjacency, reporting lower confidence for temporal-only chains.
+- **Gap reporting** - Broken chains report explicit gaps (`missing_diff`, `missing_reason`, `missing_result`, `broken_link`) instead of hallucinating reasons.
+- **Role classification** - Pattern-based classification with priority: lesson → decision → downstream_change → result → action → problem.
+- **Token budget** - Max 2000 chars by default; graceful failure never blocks normal recall; redaction still applies.
+
 ### Self-Continuity Evidence Hydration (Phase 23)
 - **Canonical hydration** - When a self-continuity record is recalled, its canonical self-observation and evidence anchors are injected directly via a dedicated `SelfContinuityHydrator` path — bypassing lossy generic/episodic compression.
 - **Canonical fields** - record_id, created_at, trigger_type, self_observation, evidence_anchors, continuity_gap, confidence_score, drift_summary, similarity_method.
@@ -59,7 +66,7 @@ This plugin gives an AI assistant long-term memory. Without it, every new sessio
 
 ## Test Suite
 
-Current source of truth is the test runner output. The suite includes fresh-schema and Phase 19b integration coverage for clean installs, explicit backfill, and hashed recall telemetry. 46 tests total across 9 suites.
+Current source of truth is the test runner output. The suite includes fresh-schema and Phase 19b integration coverage for clean installs, explicit backfill, and hashed recall telemetry. 73 tests total across 13 suites.
 
 | Suite | What It Covers |
 |-------|----------------|
