@@ -8,6 +8,10 @@ type ToolArgs = Record<string, unknown>;
 const MEMORY_TYPES: MemoryType[] = ['conversation', 'workspace', 'repo', 'preference', 'lesson', 'episodic', 'procedural', 'self_continuity'];
 const SEARCH_MODES: MemorySearchMode[] = ['project', 'legacy', 'global'];
 const SORT_OPTIONS: SortBy[] = ['recent', 'important', 'accessed'];
+const TOOL_OUTPUT_SCHEMA = {
+  type: 'object',
+  additionalProperties: true,
+};
 
 export const MCP_TOOLS = [
   toolSpec('save_memory', 'Persist a memory row for the active project.', {
@@ -104,7 +108,7 @@ function toolSpec(
   required: string[] = [],
   annotations: ToolAnnotations = hints(true, false, false),
 ) {
-  return { name, title: name, description, annotations, inputSchema: { type: 'object', properties, required } };
+  return { name, title: name, description, annotations, inputSchema: { type: 'object', properties, required }, outputSchema: TOOL_OUTPUT_SCHEMA };
 }
 
 function hints(readOnlyHint: boolean, openWorldHint: boolean, destructiveHint: boolean): ToolAnnotations {

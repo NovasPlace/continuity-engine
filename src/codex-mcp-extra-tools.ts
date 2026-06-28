@@ -1,5 +1,9 @@
 const sessionTool = { type: 'string', description: 'Optional bridge session id.' };
 const projectTool = { type: 'string', description: 'Project root or identifier.' };
+const TOOL_OUTPUT_SCHEMA = {
+  type: 'object',
+  additionalProperties: true,
+};
 
 export const EXTRA_MCP_TOOLS = [
   toolSpec('memory_delete', 'Delete a memory by ID.', {
@@ -146,7 +150,7 @@ export const EXTRA_MCP_TOOLS = [
 export const EXTRA_MCP_TOOL_NAMES = EXTRA_MCP_TOOLS.map((tool) => tool.name);
 
 function toolSpec(name: string, description: string, properties: Record<string, unknown>, required: string[] = [], annotations: ToolAnnotations = hints(true, false, false)) {
-  return { name, title: name, description, annotations, inputSchema: { type: 'object', properties, required } };
+  return { name, title: name, description, annotations, inputSchema: { type: 'object', properties, required }, outputSchema: TOOL_OUTPUT_SCHEMA };
 }
 
 function hints(readOnlyHint: boolean, openWorldHint: boolean, destructiveHint: boolean): ToolAnnotations {
