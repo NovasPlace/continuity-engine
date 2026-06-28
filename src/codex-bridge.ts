@@ -20,6 +20,8 @@ import {
   type CompactionReportPayload,
   type ContextBriefPayload,
 } from './bridge-ops.js';
+import { previewTeacherTracesOp, seedTeacherTracesOp } from './teacher-trace-ops.js';
+import type { TeacherTraceSeedResult } from './teacher-trace-types.js';
 import {
   handoffSummaryOp,
   resumeContextOp,
@@ -102,6 +104,24 @@ export class CodexMemoryBridge {
     return getCompactionReportOp(this.deps, sessionId);
   }
 
+  async previewTeacherTraces(input: { projectRoot?: string; sessionId: string; limit?: number }): Promise<TeacherTraceSeedResult> {
+    await this.ensureSession(input.projectRoot, input.sessionId);
+    return previewTeacherTracesOp(this.deps, {
+      projectId: input.projectRoot,
+      sessionId: input.sessionId,
+      limit: input.limit,
+    });
+  }
+
+  async seedTeacherTraces(input: { projectRoot?: string; sessionId: string; limit?: number }): Promise<TeacherTraceSeedResult> {
+    await this.ensureSession(input.projectRoot, input.sessionId);
+    return seedTeacherTracesOp(this.deps, {
+      projectId: input.projectRoot,
+      sessionId: input.sessionId,
+      limit: input.limit,
+    });
+  }
+
   async resumeContext(input: { projectRoot: string; task: string; sessionId?: string; recentLimit?: number }): Promise<ResumeContextPayload> {
     const sessionId = await this.ensureSession(input.projectRoot, input.sessionId);
     if (!sessionId) {
@@ -152,6 +172,8 @@ export class CodexMemoryBridge {
       'prune_memories_dry_run',
       'backfill_missing_embeddings',
       'get_compaction_report',
+      'preview_teacher_traces',
+      'seed_teacher_traces',
     ];
   }
 
