@@ -1,6 +1,6 @@
 import type { PluginContext } from '../plugin-context.js';
 import type { ToolCallRecord } from '../types.js';
-import { queueDocUpdate, flushDocUpdates, getPendingUpdates } from './auto-docs.js';
+import { queueDocUpdate, flushDocUpdates, getPendingUpdates, ensureProjectDocsInitialized } from './auto-docs.js';
 
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 const FLUSH_DELAY_MS = 2000;
@@ -11,7 +11,7 @@ function scheduleDocFlush(ctx: PluginContext): void {
     flushTimer = null;
     if (getPendingUpdates().length > 0) {
       try {
-        await flushDocUpdates(ctx);
+        await flushDocUpdates(ctx, ctx.directory);
       } catch (err) {
         console.error('[CrossSessionMemory] Auto-doc flush error:', err);
       }
@@ -29,6 +29,15 @@ export function createToolExecuteBeforeHook(ctx: PluginContext) {
     try {
       ctx.syncActiveSession(input.sessionID);
       const result = ctx.loopDetector.recordCall(input.tool, output.args);
+
+      // Lesson trigger warnings — check BEFORE tool executes
+      try {
+        await ctx.lessonTriggers.refresh();
+        const warning = ctx.lessonTriggers.buildInjection(input.tool, output.args ?? {});
+        if (warning) {
+          console.warn(`[LessonTriggers] Matched lesson for tool "${input.tool}":\n${warning}`);
+        }
+      } catch { /* lesson trigger check non-critical */ }
 
       // Phase 4B — Risky edit auto-checkpoint
       const autoConfig = ctx.config.checkpoint.auto;
@@ -55,14 +64,19 @@ export function createToolExecuteBeforeHook(ctx: PluginContext) {
       if (result.loop) {
         console.warn('[CrossSessionMemory] LOOP DETECTED:', result.mayday);
         await ctx.memoryManager.saveMemory({
-          content: `LESSON: Detected loop - ${input.tool} called ${result.callCount} times with identical arguments. Need to change approach.`,
+          content: `Avoid repeating ${input.tool} with identical arguments — it causes loops. Use a different tool or change the approach.`,
           type: 'lesson',
           importance: 0.75,
           emotion: 'frustration',
           confidence: 0.9,
           source: 'lesson',
-          tags: ['auto-lesson', 'loop-detected', input.tool],
-          metadata: { tool: input.tool, callCount: result.callCount, mayday: result.mayday },
+          tags: ['auto-lesson', 'loop-detected', input.tool, `tool:${input.tool}`],
+          metadata: {
+            tool: input.tool,
+            callCount: result.callCount,
+            mayday: result.mayday,
+            triggers: { tools: [input.tool] },
+          },
           sessionId: sid ?? undefined,
         });
         ctx.loopDetector.clearHistory();
@@ -85,6 +99,11 @@ export function createToolExecuteAfterHook(ctx: PluginContext) {
       ctx.syncActiveSession(input.sessionID);
       const sid = ctx.state.currentSessionId;
 
+      if (ctx.directory && !ctx.state._docsInitialized) {
+        ctx.state._docsInitialized = true;
+        ensureProjectDocsInitialized(ctx.directory).catch(() => {});
+      }
+
       // Record tool call for distiller
       if (ctx.config.distiller.enabled && sid) {
         const filePath =
@@ -106,6 +125,22 @@ export function createToolExecuteAfterHook(ctx: PluginContext) {
         };
 
         ctx.toolDistiller.record(record);
+
+        // Work journal — live capture of tool calls
+        if (ctx.config.workJournal?.enabled) {
+          ctx.workJournal.recordToolCall({
+            sessionId: sid,
+            projectId: ctx.directory,
+            toolName: input.tool as string,
+            args: input.args ?? {},
+            output: typeof output.output === 'string'
+              ? output.output.substring(0, 2000)
+              : JSON.stringify(output.output ?? '').substring(0, 2000),
+            error: output.metadata?.error as string | undefined,
+            exitCode: output.metadata?.exitCode as number | undefined,
+          });
+          ctx.workJournal.updateTokenSnapshot(output.metadata?.tokenCount ?? 0);
+        }
 
         // Auto-distill when buffer reaches threshold
         if (ctx.toolDistiller.bufferLength >= 10) {

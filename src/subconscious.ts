@@ -28,6 +28,11 @@ export class SubconsciousWatcher {
     '__pycache__', '.cache', '.parcel-cache', 'coverage',
   ]);
 
+  // Structural directories that should never get an auto-generated README
+  private static readonly STRUCTURAL_DIRS = new Set([
+    'src', 'test', 'tests', 'docs', 'plugins', 'migrations',
+  ]);
+
   private static readonly BUILD_FILE_PATTERNS = [
     /\.map$/,        // source maps
     /\.min\.[jt]s$/, // minified files
@@ -218,8 +223,20 @@ export class SubconsciousWatcher {
    */
   private async handleNewDirectory(dirPath: string): Promise<void> {
     try {
+      // Skip structural directories and their subdirectories
+      const dirName = path.basename(dirPath);
+      if (SubconsciousWatcher.STRUCTURAL_DIRS.has(dirName)) {
+        return;
+      }
+      // Also skip if any ancestor path segment is a structural directory
+      const relative = path.relative(process.cwd(), dirPath);
+      const segments = relative.split(path.sep);
+      if (segments.slice(0, -1).some(s => SubconsciousWatcher.STRUCTURAL_DIRS.has(s))) {
+        return;
+      }
+
       const readmePath = path.join(dirPath, 'README.md');
-      
+
       // Check if README already exists
       try {
         await fs.access(readmePath);
@@ -227,8 +244,6 @@ export class SubconsciousWatcher {
       } catch {
         // README doesn't exist, create it
       }
-
-      const dirName = path.basename(dirPath);
       const relativePath = path.relative(process.cwd(), dirPath);
       
       const readmeContent = `# ${dirName}

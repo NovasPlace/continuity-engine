@@ -9,8 +9,11 @@ import { CrossSessionCausalStitcher } from '../cross-session-causal-stitcher.js'
 import { FailureTraceStore, formatFailureTraceForInjection } from '../failure-trace-store.js';
 import { CANONICAL_PHASES, CANONICAL_LINKS } from '../self-continuity-narrative-canonical.js';
 import { CANONICAL_STITCHES } from '../self-continuity-narrative-canonical.js';
+import { buildResumeInjection, type WorkJournalInjectDeps } from '../work-journal-inject.js';
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+
+const LESSON_INJECTION_POSITION = 'after-evidence';
 
 const TELEMETRY_LOG = join(process.env.HOME ?? process.env.USERPROFILE ?? '.', '.cross-session-memory', 'self-continuity-telemetry.jsonl');
 const PROMPT_INJECTION_DISABLE_ENV = 'CSM_DISABLE_PROMPT_INJECTION';
@@ -193,6 +196,15 @@ VERDICT: ${dbStatus === 'connected'
       // PREPEND evidence block — model sees facts first, before any instructions
       output.system.unshift(evidenceBlock);
 
+      // --- Lesson trigger injection (actionable lessons, not trivia) ---
+      try {
+        await ctx.lessonTriggers.refresh();
+        const lessonInjection = ctx.lessonTriggers.buildFullSystemInjection();
+        if (lessonInjection) {
+          output.system.push(lessonInjection);
+        }
+      } catch { /* lesson triggers non-critical */ }
+
       // --- Context recall injection ---
       const contextBrief = await ctx.contextRecall.getContextBrief();
       if (contextBrief) {
@@ -212,6 +224,26 @@ VERDICT: ${dbStatus === 'connected'
         const checkpointInjection = await buildCheckpointInjection(ctx.checkpointInjectDeps, input.sessionID);
         if (checkpointInjection) {
           output.system.push(checkpointInjection);
+        }
+      }
+
+      // --- Work Journal: Inject resume payload from prior session ---
+      if (input.sessionID && ctx.config.workJournal?.enabled) {
+        try {
+          const payload = await ctx.workJournal.buildResumePayload(
+            input.sessionID,
+            ctx.directory,
+          );
+          if (payload) {
+            const deps: WorkJournalInjectDeps = {
+              maxInjectTokens: ctx.config.workJournal.injectMaxTokens,
+            };
+            const injection = buildResumeInjection(payload, deps);
+            output.system.push(injection);
+            console.log(`[WorkJournal] Injected resume payload for session ${input.sessionID.slice(0, 8)} (${payload.totalEntries} entries)`);
+          }
+        } catch (wjErr) {
+          console.error('[WorkJournal] Inject hook error:', wjErr);
         }
       }
 

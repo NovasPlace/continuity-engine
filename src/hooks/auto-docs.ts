@@ -1,7 +1,7 @@
 import { PluginContext } from "../plugin-context.js";
 import { promises as fs } from "fs";
 import { join, normalize } from "path";
-import { autoDocumentChange, reconcileSystemMap } from "./doc-analyzer.js";
+import { autoDocumentChange, reconcileSystemMap, initializeDocsForProject } from "./doc-analyzer.js";
 
 export const DEFAULT_AUTO_DOCS_CONFIG = {
   enabled: true,
@@ -21,6 +21,7 @@ interface PendingDocUpdate {
 
 const pendingUpdates: PendingDocUpdate[] = [];
 let flushed = false;
+const initializedProjects = new Set<string>();
 
 export function queueDocUpdate(
   filePath: string,
@@ -67,7 +68,7 @@ export function isIgnoredPath(filePath: string): boolean {
     });
   }
 
-export async function flushDocUpdates(context?: PluginContext): Promise<void> {
+export async function flushDocUpdates(context?: PluginContext, workspaceDir?: string): Promise<void> {
   if (flushed) return;
   if (pendingUpdates.length === 0) return;
 
@@ -77,7 +78,8 @@ export async function flushDocUpdates(context?: PluginContext): Promise<void> {
     deduplicateEdits: true,
     groupMultipleEdits: true,
   };
-  const docsDir = join(process.cwd(), "docs");
+  const projectDir = workspaceDir ?? context?.directory ?? process.cwd();
+  const docsDir = join(projectDir, "docs");
 
   try {
     await fs.mkdir(docsDir, { recursive: true });
@@ -115,7 +117,7 @@ export async function flushDocUpdates(context?: PluginContext): Promise<void> {
   }
 
   try {
-    const reconResult = await reconcileSystemMap();
+    const reconResult = await reconcileSystemMap(docsDir, projectDir);
     if (reconResult.added > 0 || reconResult.updated > 0 || reconResult.removed > 0) {
       console.log(`[auto-docs] SYSTEM_MAP reconciled: +${reconResult.added} ~${reconResult.updated} -${reconResult.removed}`);
     }
@@ -161,5 +163,20 @@ export function getPendingUpdates(): PendingDocUpdate[] {
 
 export function resetFlushedFlag(): void {
   flushed = false;
+}
+
+export async function ensureProjectDocsInitialized(projectDir: string): Promise<void> {
+  if (initializedProjects.has(projectDir)) return;
+  initializedProjects.add(projectDir);
+  try {
+    await initializeDocsForProject(projectDir);
+    console.log(`[auto-docs] Initialized docs for project: ${projectDir}`);
+  } catch (err) {
+    console.error(`[auto-docs] Failed to initialize docs for ${projectDir}:`, err);
+  }
+}
+
+export function isProjectInitialized(projectDir: string): boolean {
+  return initializedProjects.has(projectDir);
 }
 

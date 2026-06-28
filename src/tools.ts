@@ -26,6 +26,7 @@ const CSM_TOOL_NAMES = [
   'csm_memory_compact',
   'csm_memory_backfill_embeddings',
   'csm_runtime_status',
+  'csm_compaction_audit',
 ] as const;
 
 /**
@@ -247,12 +248,30 @@ export function memoryContextTool(contextRecall: ContextRecallDaemon) {
  */
 export function memoryLessonTool(memoryManager: MemoryManager) {
   return tool({
-    description: 'Save a lesson learned from a mistake. Lessons are stored with high importance and "frustration" emotion for better recall.',
+    description: 'Save a lesson learned from a mistake. Lessons are stored with high importance and "frustration" emotion for better recall. Optionally specify triggerPatterns to make the lesson fire contextually when matching tools/files are used.',
     args: {
-      content: tool.schema.string().describe('What was learned'),
+      content: tool.schema.string().describe('What was learned — be actionable: say what TO do, not just what happened. E.g. "Use the Edit tool instead of PowerShell .Replace() on .ts files" not "PowerShell replace failed"'),
       frustration: tool.schema.number().optional().describe('Frustration level 0-1 (default 0.7)'),
+      triggerTools: tool.schema.array(tool.schema.string()).optional().describe('Tool names that trigger this lesson (e.g. ["bash", "edit"])'),
+      triggerFiles: tool.schema.array(tool.schema.string()).optional().describe('File extensions that trigger this lesson (e.g. [".ts", ".js"])'),
+      triggerArgPatterns: tool.schema.record(tool.schema.string(), tool.schema.string()).optional().describe('Arg regex patterns that trigger this lesson (e.g. {"command": "\\\\.Replace\\\\("})'),
     },
     async execute(args, context) {
+      const triggerMeta: Record<string, unknown> = {};
+      if (args.triggerTools?.length) triggerMeta.tools = args.triggerTools;
+      if (args.triggerFiles?.length) triggerMeta.files = args.triggerFiles;
+      if (args.triggerArgPatterns && Object.keys(args.triggerArgPatterns).length > 0) triggerMeta.args = args.triggerArgPatterns;
+
+      const metadata: Record<string, unknown> = {
+        frustration: args.frustration ?? 0.7,
+      };
+      if (Object.keys(triggerMeta).length > 0) {
+        metadata.triggers = triggerMeta;
+      }
+
+      const tags = ['lesson', 'learned'];
+      for (const t of args.triggerTools ?? []) tags.push(`tool:${t}`);
+
       const memory = await memoryManager.saveMemory({
         content: args.content,
         type: 'lesson',
@@ -260,16 +279,18 @@ export function memoryLessonTool(memoryManager: MemoryManager) {
         emotion: 'frustration',
         confidence: 0.9,
         source: 'lesson',
-        tags: ['lesson', 'learned'],
-        metadata: {
-          frustration: args.frustration ?? 0.7,
-        },
+        tags,
+        metadata,
         sessionId: context.sessionID,
       });
 
+      const triggerNote = Object.keys(triggerMeta).length > 0
+        ? `\nTrigger patterns saved: ${JSON.stringify(triggerMeta)}`
+        : '\nNo trigger patterns specified — lesson will match broadly.';
+
       return {
         title: 'Lesson Saved',
-        output: `Lesson #${memory.id} saved: ${args.content.substring(0, 100)}${args.content.length > 100 ? '...' : ''}\n\nThis lesson will be prioritized in future context recalls.`,
+        output: `Lesson #${memory.id} saved: ${args.content.substring(0, 100)}${args.content.length > 100 ? '...' : ''}${triggerNote}\n\nThis lesson will fire contextually when matching tools/files are used.`,
         metadata: {
           memoryId: memory.id,
           importance: memory.importance,
@@ -809,3 +830,19 @@ export function runtimeStatusTool(
 }
 
 export { CSM_TOOL_NAMES };
+
+export function compactionAuditTool(database: Database) {
+  return tool({
+    description: 'Audit compaction telemetry for correctness. Recomputes totals from raw before/after values, checks for duplicates, negative values, math errors, and zero fields. Verifies SUM(tokens_saved) matches SUM(before_tokens - after_tokens).',
+    args: {},
+    async execute() {
+      const { auditCompactionTelemetry, formatAuditReport } = await import('./compaction-telemetry-audit.js');
+      const result = await auditCompactionTelemetry(database.getPool());
+      return {
+        title: result.passed ? 'Compaction Audit PASSED' : 'Compaction Audit ISSUES FOUND',
+        output: formatAuditReport(result),
+        metadata: result,
+      };
+    },
+  });
+}

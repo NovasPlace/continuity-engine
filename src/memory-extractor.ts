@@ -137,35 +137,82 @@ export class MemoryExtractor {
     const type: MemoryType = isFailure ? 'lesson' : 'procedural';
     const importance = isFailure ? 0.75 : 0.6;
     const emotion: MemoryEmotion = isFailure ? 'frustration' : 'success';
-    const confidence = 0.92; // Distilled from real tool traces — high signal
+    const confidence = 0.92;
+
+    let content = group.proceduralInsight ?? group.intent;
+    if (isFailure) {
+      content = this.makeActionableLesson(content, group);
+    }
+
+    const tags = this.generateDistilledTags(group, isFailure);
+    const metadata: Record<string, unknown> = {
+      source: 'distiller',
+      extractionMethod: 'deterministic',
+      intent: group.intent,
+      filesChanged: group.filesChanged,
+      commandsRun: group.commandsRun,
+      outcome: group.outcome,
+      errorSummary: group.errorSummary,
+      fixApplied: group.fixApplied,
+      toolCallCount: group.toolCalls.length,
+    };
+
+    if (isFailure) {
+      const triggerMeta = this.inferTriggerMetaFromGroup(group);
+      if (Object.keys(triggerMeta).length > 0) {
+        metadata.triggers = triggerMeta;
+      }
+    }
 
     return {
       id: `distill_${group.id}`,
       sessionId,
       projectId,
       proposedType: type,
-      content: group.proceduralInsight ?? group.intent,
+      content,
       importance,
       emotion,
       confidence,
-      tags: this.generateDistilledTags(group, isFailure),
-      metadata: {
-        source: 'distiller',
-        extractionMethod: 'deterministic',
-        intent: group.intent,
-        filesChanged: group.filesChanged,
-        commandsRun: group.commandsRun,
-        outcome: group.outcome,
-        errorSummary: group.errorSummary,
-        fixApplied: group.fixApplied,
-        toolCallCount: group.toolCalls.length,
-      },
+      tags,
+      metadata,
       status: this.determineInitialStatus(confidence),
       source: 'extractor',
       createdAt: new Date(),
       reviewedAt: undefined,
       reviewedBy: undefined,
     };
+  }
+
+  private makeActionableLesson(content: string, group: ToolCallGroup): string {
+    if (content.toLowerCase().startsWith('lesson:') || content.toLowerCase().startsWith('lessone:')) {
+      content = content.replace(/^lessons?:\s*/i, '');
+    }
+
+    const hasActionWord = /\b(use|never|always|avoid|do not|don't|instead|replace|fix)\b/i.test(content);
+    if (!hasActionWord) {
+      const fix = group.fixApplied ?? group.errorSummary ?? '';
+      if (fix) {
+        content = `Instead of that approach, ${fix}. ${content}`;
+      } else {
+        content = `Avoid this — ${content}`;
+      }
+    }
+
+    return content;
+  }
+
+  private inferTriggerMetaFromGroup(group: ToolCallGroup): Record<string, unknown> {
+    const tools = [...new Set(group.toolCalls.map((c) => c.tool))];
+    const files = [...new Set(group.filesChanged)]
+      .map((f) => {
+        const dot = f.lastIndexOf('.');
+        return dot >= 0 ? f.substring(dot) : '';
+      })
+      .filter((f) => f.length > 0 && f.length <= 6);
+    const triggers: Record<string, unknown> = {};
+    if (tools.length > 0) triggers.tools = tools;
+    if (files.length > 0) triggers.files = [...new Set(files)];
+    return triggers;
   }
 
   /** Generate tags for a distilled candidate */

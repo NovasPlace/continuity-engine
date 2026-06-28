@@ -50,9 +50,11 @@ import {
   memoryCompactTool,
 } from './tools.js';
 import { memoryBackfillEmbeddingsTool } from './maintenance-tools.js';
-import { runtimeStatusTool, CSM_TOOL_NAMES } from './tools.js';
+import { runtimeStatusTool, compactionAuditTool, CSM_TOOL_NAMES } from './tools.js';
 import { PluginConfig, ToolCallRecord, CompactionResult } from './types.js';
 import { CheckpointStore } from './checkpoint-store.js';
+import { AgentWorkJournal } from './agent-work-journal.js';
+import { LessonTriggerCache } from './lesson-trigger-cache.js';
 import { createCheckpointTool, expandCheckpointRefTool, listCheckpointsTool, type CheckpointToolDeps } from './checkpoint-tool.js';
 import { buildCheckpointInjection, type CheckpointInjectDeps } from './checkpoint-inject.js';
 import { createAutoCheckpoint, type AutoCheckpointTrigger } from './helpers/auto-checkpoint.js';
@@ -146,6 +148,13 @@ export default async (
   const autoCheckpoint = (sessionId: string, trigger: AutoCheckpointTrigger, details?: Record<string, unknown>) =>
     createAutoCheckpoint(autoCheckpointCtx, sessionId, trigger, details);
 
+  const workJournal = new AgentWorkJournal(
+    database.getPool(),
+    config.workJournal,
+    redactor,
+  );
+  const lessonTriggers = new LessonTriggerCache(database.getPool());
+
   contextRecall.start();
   subconscious.start();
   gitWatcher.start();
@@ -164,6 +173,8 @@ export default async (
     refreshActiveContext,
     syncActiveSession,
     lastCompileResult: null,
+    workJournal,
+    lessonTriggers,
     state: {
       get currentSessionId() { return currentSessionId; },
       get messageCount() { return messageCount; },
@@ -214,6 +225,7 @@ export default async (
               sessionId: currentSessionId,
             });
           }
+          workJournal.recordSessionEnd(currentSessionId, ctx.directory, messageCount);
         }
 
         if (event.type === 'file.edited') {
@@ -286,6 +298,12 @@ export default async (
                         fullTranscript: true,
                       },
                       sessionId: info.sessionID,
+                    });
+                    workJournal.recordDecision({
+                      sessionId: info.sessionID,
+                      projectId: ctx.directory,
+                      intent: fullContent.trim().substring(0, 200),
+                      filesTouched: [],
                     });
                   } else {
                     console.log(`[CrossSessionMemory] Skipping ${messageId} - not longer than existing (${fullContent.length} <= ${existingLen})`);
@@ -363,9 +381,11 @@ export default async (
       try {
         if (!output.messages || output.messages.length === 0) return;
 
-        writePromptDebugLog(ctx.directory, 'before-normalization', output.messages as { info?: any; parts?: any[] }[], {
-          currentSessionId,
-        });
+        if (config.promptDebug) {
+          writePromptDebugLog(ctx.directory, 'before-normalization', output.messages as { info?: any; parts?: any[] }[], {
+            currentSessionId,
+          });
+        }
 
         const normalization = normalizePromptMessages(output.messages as { info?: any; parts?: any[] }[], {
           cwd: ctx.directory,
@@ -378,11 +398,13 @@ export default async (
           );
         }
         output.messages = normalization.messages as any;
-        writePromptDebugLog(ctx.directory, 'after-normalization', output.messages as { info?: any; parts?: any[] }[], {
-          currentSessionId,
-          convertedSystemMessages: normalization.convertedSystemMessages,
-          droppedMessages: normalization.droppedMessages,
-        });
+        if (config.promptDebug) {
+          writePromptDebugLog(ctx.directory, 'after-normalization', output.messages as { info?: any; parts?: any[] }[], {
+            currentSessionId,
+            convertedSystemMessages: normalization.convertedSystemMessages,
+            droppedMessages: normalization.droppedMessages,
+          });
+        }
         if (output.messages.length === 0) return;
 
         // ── Token bucket: count ALL raw tokens BEFORE any compaction ──
@@ -670,10 +692,18 @@ export default async (
           },
           sessionId: info.sessionID,
         });
-
-        writePromptDebugLog(ctx.directory, 'before-return', output.messages as { info?: any; parts?: any[] }[], {
-          currentSessionId,
+        workJournal.recordDecision({
+          sessionId: info.sessionID,
+          projectId: ctx.directory,
+          intent: fullContent.trim().substring(0, 200),
+          filesTouched: [],
         });
+
+        if (config.promptDebug) {
+          writePromptDebugLog(ctx.directory, 'before-return', output.messages as { info?: any; parts?: any[] }[], {
+            currentSessionId,
+          });
+        }
       } catch (error) {
         console.error('[CrossSessionMemory] Messages transform error:', error);
       }
@@ -706,6 +736,7 @@ export default async (
       csm_memory_compact: memoryCompactTool(contextCompactor),
       csm_memory_backfill_embeddings: memoryBackfillEmbeddingsTool(memoryManager),
       csm_runtime_status: runtimeStatusTool(database, memoryManager, config, currentSessionId),
+      csm_compaction_audit: compactionAuditTool(database),
       // Phase 4A — Durable session checkpointing
       create_checkpoint: createCheckpointTool(checkpointToolDeps),
         expand_checkpoint_ref: expandCheckpointRefTool(checkpointToolDeps),
@@ -763,6 +794,9 @@ export default async (
           sessionId: currentSessionId,
         });
       }
+      if (currentSessionId && config.workJournal?.persistOnDispose) {
+        workJournal.recordSessionEnd(currentSessionId, ctx.directory, messageCount);
+      }
 
       // Phase 21 — Self-continuity record at session end
       if (currentSessionId && config.selfContinuity.enabled) {
@@ -793,7 +827,7 @@ export default async (
       
       await memoryManager.cleanup();
       await database.disconnect();
-      await flushDocUpdates(pluginCtx);
+      await flushDocUpdates(pluginCtx, ctx.directory);
       
       console.log('[CrossSessionMemory] Disposed');
     },

@@ -16,3 +16,4 @@ coverage
 opencode
 .opencode/prompt-debug/
 .cross-session-memory/
+.tmp/

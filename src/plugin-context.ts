@@ -18,6 +18,8 @@ import type { PrimingEngine } from './priming-engine.js';
 import type { CheckpointStore } from './checkpoint-store.js';
 import type { CheckpointToolDeps } from './checkpoint-tool.js';
 import type { CheckpointInjectDeps } from './checkpoint-inject.js';
+import type { AgentWorkJournal } from './agent-work-journal.js';
+import type { LessonTriggerCache } from './lesson-trigger-cache.js';
 import type { AutoCheckpointTrigger } from './helpers/auto-checkpoint.js';
 import type { CompileResult } from './context-compiler.js';
 
@@ -33,6 +35,7 @@ export interface PluginState {
   capturedMessageSizes: Map<string, number>;
   recentUserMessages: Map<string, string>;
   stateChangeTracker?: Record<string, unknown>;
+  _docsInitialized?: boolean;
 }
 
 export interface PluginContext {
@@ -58,5 +61,7 @@ export interface PluginContext {
   refreshActiveContext: (sessionId: string) => Promise<void>;
   syncActiveSession: (sessionId: string) => void;
   lastCompileResult: CompileResult | null;
+  workJournal: AgentWorkJournal;
+  lessonTriggers: LessonTriggerCache;
   state: PluginState;
 }

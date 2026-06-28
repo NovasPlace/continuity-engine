@@ -9,8 +9,20 @@
 | `test/phase32-trace-benchmark.test.ts` | none | test | Test suite |
 | `test/phase32-docs-continuity.test.ts` | none | test | Test suite |
 | `test/benchmark-context-governor-trace.ts` | none | test | Test suite |
+| `test/phase33-teacher-trace.test.ts` | none | test | Test suite |
+| `test/phase33-teacher-trace-benchmark.ts` | none | test | Benchmark script |
 | `src/context-governor-trace.ts` | TraceBenchmarkReport, TraceSessionMetrics, CapturedTraceBenchmarkReport, measureTraceSession, compareTraceSessions, runTraceBenchmark | src | Module |
 | `src/context-governor-trace-capture.ts` | captureTraceSession | src | Module |
+| `src/teacher-trace.ts` | TeacherTraceCard, TeacherTraceSeedInput, TeacherTraceSeedResult, deriveTeacherTraceCards, formatTeacherTraceCards, previewTeacherTraces, seedTeacherTraces | src | Module |
+| `src/teacher-trace-core.ts` | deriveTeacherTraceCards, formatTeacherTraceCards, summarizeTeacherTraceSeed | src | Module |
+| `src/teacher-trace-seeder.ts` | previewTeacherTraces, seedTeacherTraces | src | Module |
+| `src/teacher-trace-ops.ts` | previewTeacherTracesOp, seedTeacherTracesOp | src | Module |
+| `src/teacher-trace-types.ts` | TeacherTraceCard, TeacherTraceSeedInput, TeacherTraceSeedResult | src | Module |
+| `src/trace-vault.ts` | TraceVaultCaptureInput, TraceVaultCaptureResult, buildTraceVaultCapture, captureTraceVault, loadTraceVaultEntries, seedTeacherTracesFromVault | src | Module |
+| `src/trace-vault-core.ts` | buildTraceVaultCapture, formatTraceVaultCapture | src | Module |
+| `src/trace-vault-ops.ts` | captureTraceVaultOp, previewTraceVaultOp, seedTeacherTracesFromVaultOp | src | Module |
+| `src/trace-vault-store.ts` | initializeTraceVaultSchema, captureTraceVault, loadTraceVaultEntries, seedTeacherTracesFromVault, formatTraceVaultForInjection | src | Module |
+| `src/trace-vault-types.ts` | TraceVaultCaptureInput, TraceVaultCaptureResult | src | Module |
 | `src/context-governor-slope.ts` | estimateSlopeGrowth | src | Module |
 | `src/context-governor-optimizer.ts` | optimizeGovernorContext | src | Module |
 | `test/value-source-guard.test.ts` | none | test | Test suite |

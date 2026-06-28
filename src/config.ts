@@ -20,6 +20,7 @@ export const DEFAULT_CONFIG: PluginConfig = {
   logCommands: false,
   logSessionLifecycle: false,
   filterBuildArtifacts: true,
+  promptDebug: false,
   extractor: {
     enabled: true,
     minTurnsBeforeExtract: 3,
@@ -107,6 +108,15 @@ export const DEFAULT_CONFIG: PluginConfig = {
     retentionDays: 30,
   },
   contextRollover: DEFAULT_ROLLOVER_CONFIG,
+  // Agent work journal — live incremental capture of agent's work state
+  workJournal: {
+    enabled: true,
+    maxResumeEntries: 20,
+    maxIntentChars: 200,
+    injectMaxTokens: 800,
+    autoMarkMilestone: true,
+    persistOnDispose: true,
+  },
   autoDocs: {
     enabled: true,
     ignoredPaths: ["docs/", "dist/", "node_modules/", "coverage/", ".git/"],

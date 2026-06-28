@@ -334,9 +334,9 @@ export async function autoDocumentChange(
   await applyDocUpdate(plan);
 }
 
-export async function reconcileSystemMap(docsDir?: string): Promise<{ added: number; updated: number; removed: number }> {
+export async function reconcileSystemMap(docsDir?: string, projectDir?: string): Promise<{ added: number; updated: number; removed: number }> {
   const dir = docsDir ?? getDocsDir();
-  const cwd = process.cwd();
+  const cwd = projectDir ?? process.cwd();
   let added = 0, updated = 0, removed = 0;
 
   let systemMapContent: string;
@@ -539,3 +539,83 @@ export {
   hasExistingEntry, removeExistingEntry,
   extractImports, extractExports, detectErrorPatterns,
 };
+
+export async function initializeDocsForProject(projectDir: string): Promise<void> {
+  const docsDir = join(projectDir, DOCS_DIR);
+  await fs.mkdir(docsDir, { recursive: true });
+
+  const systemMapPath = join(docsDir, "SYSTEM_MAP.md");
+  try {
+    await fs.access(systemMapPath);
+  } catch {
+    const sourceDirs = await detectSourceDirs(projectDir);
+    let content = "# System Map\n\n> Auto-generated architecture reference. Updated on file edits via `auto-docs` hook.\n\n";
+
+    for (const srcDir of sourceDirs) {
+      const dirName = srcDir.relativeName;
+      const files = await scanSourceFiles(srcDir.absolutePath);
+      if (files.length === 0) continue;
+
+      content += `## ${dirName.charAt(0).toUpperCase() + dirName.slice(1)}\n\n`;
+      content += "| File | Exports | Type | Role |\n";
+      content += "|------|---------|------|------|\n";
+
+      for (const sf of files) {
+        const relativePath = `${dirName}/${sf.relativePath}`;
+        let fileContent: string;
+        try {
+          fileContent = await fs.readFile(join(projectDir, relativePath), "utf-8");
+        } catch { continue; }
+        if (isStubContent(fileContent)) continue;
+
+        const exports = extractExports(fileContent);
+        const isTest = sf.relativePath.includes("test") || sf.relativePath.includes("spec");
+        const modType = isTest ? "test" : guessModuleType(sf.relativePath);
+        const role = guessModuleRole(sf.relativePath, exports);
+
+        content += `| \`${relativePath}\` | ${exports.join(", ") || "none"} | ${modType} | ${role} |\n`;
+      }
+      content += "\n";
+    }
+    await fs.writeFile(systemMapPath, content, "utf-8");
+  }
+
+  const changelogPath = join(docsDir, "CHANGELOG_LIVE.md");
+  try {
+    await fs.access(changelogPath);
+  } catch {
+    await fs.writeFile(changelogPath, "# CHANGELOG_LIVE.md\n\n## Development Log\n\n", "utf-8");
+  }
+
+  const decisionsPath = join(docsDir, "DECISIONS.md");
+  try {
+    await fs.access(decisionsPath);
+  } catch {
+    await fs.writeFile(decisionsPath, "# DECISIONS.md\n\n## Architecture Decisions\n\n", "utf-8");
+  }
+
+  const debugNotesPath = join(docsDir, "DEBUG_NOTES.md");
+  try {
+    await fs.access(debugNotesPath);
+  } catch {
+    await fs.writeFile(debugNotesPath, "# DEBUG_NOTES.md\n\n## Error Patterns\n\n", "utf-8");
+  }
+
+  const agentMemoryPath = join(docsDir, "AGENT_MEMORY.md");
+  try {
+    await fs.access(agentMemoryPath);
+  } catch {
+    await fs.writeFile(agentMemoryPath, "# AGENT_MEMORY.md\n\n## Lessons Learned\n\n", "utf-8");
+  }
+
+  const runbookPath = join(docsDir, "RUNBOOK.md");
+  try {
+    await fs.access(runbookPath);
+  } catch {
+    await fs.writeFile(runbookPath, "# RUNBOOK.md\n\n## Commands\n\n", "utf-8");
+  }
+
+  try {
+    await reconcileSystemMap(join(projectDir, DOCS_DIR), projectDir);
+  } catch {}
+}

@@ -1,5 +1,6 @@
 import { CodexMemoryBridge } from './codex-bridge.js';
 import type { MemoryListOptions, MemorySaveOptions, MemorySearchMode, MemorySearchOptions, MemoryType, SortBy } from './types.js';
+import { VAULT_TOOL_SPECS, teacherTraceArgs, traceVaultArgs, traceVaultPreviewArgs } from './codex-mcp-vault-tools.js';
 
 type ToolArgs = Record<string, unknown>;
 
@@ -71,6 +72,7 @@ export const MCP_TOOLS = [
   toolSpec('get_compaction_report', 'Fetch the latest compaction metric for a session.', {
     sessionId: { type: 'string', description: 'Optional session id.' },
   }),
+  ...VAULT_TOOL_SPECS,
 ];
 
 export async function invokeMcpTool(bridge: CodexMemoryBridge, name: string, args: ToolArgs) {
@@ -85,6 +87,11 @@ export async function invokeMcpTool(bridge: CodexMemoryBridge, name: string, arg
   if (name === 'prune_memories_dry_run') return bridge.pruneMemoriesDryRun();
   if (name === 'backfill_missing_embeddings') return bridge.backfillMissingEmbeddings(backfillArgs(args));
   if (name === 'get_compaction_report') return bridge.getCompactionReport(optionalString(args.sessionId));
+  if (name === 'preview_teacher_traces') return bridge.previewTeacherTraces(teacherTraceArgs(args));
+  if (name === 'seed_teacher_traces') return bridge.seedTeacherTraces(teacherTraceArgs(args));
+  if (name === 'capture_trace_vault') return bridge.captureTraceVault(traceVaultArgs(args));
+  if (name === 'preview_trace_vault') return bridge.previewTraceVault(traceVaultPreviewArgs(args));
+  if (name === 'seed_teacher_traces_from_vault') return bridge.seedTeacherTracesFromVault(traceVaultPreviewArgs(args));
   throw new Error(`Unknown tool: ${name}`);
 }
 
