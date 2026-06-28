@@ -9,6 +9,7 @@ import { CrossSessionCausalStitcher } from '../cross-session-causal-stitcher.js'
 import { FailureTraceStore, formatFailureTraceForInjection } from '../failure-trace-store.js';
 import { CANONICAL_PHASES, CANONICAL_LINKS } from '../self-continuity-narrative-canonical.js';
 import { CANONICAL_STITCHES } from '../self-continuity-narrative-canonical.js';
+import { MemoryGovernance } from '../memory_governance.js';
 import { buildResumeInjection, type WorkJournalInjectDeps } from '../work-journal-inject.js';
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -204,6 +205,24 @@ VERDICT: ${dbStatus === 'connected'
           output.system.push(lessonInjection);
         }
       } catch { /* lesson triggers non-critical */ }
+
+      // --- Memory governance veto injection (enforcement, not advisory) ---
+      try {
+        const gov = new MemoryGovernance(ctx.database.getPool());
+        const govResult = await gov.evaluate();
+        if (govResult.vetoes.length > 0) {
+          const govInjection = gov.buildVetoInjection(govResult.vetoes);
+          if (govInjection) {
+            output.system.push(govInjection);
+            logTelemetry({
+              governanceVetoesInjected: govResult.vetoes.length,
+              governanceVetoIds: govResult.vetoes.map(v => v.memoryId),
+              governanceAccessed: govResult.accessed,
+              governanceAccessLog: govResult.accessLog,
+            });
+          }
+        }
+      } catch { /* governance injection non-critical */ }
 
       // --- Context recall injection ---
       const contextBrief = await ctx.contextRecall.getContextBrief();
