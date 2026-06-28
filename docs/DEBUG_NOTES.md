@@ -76,6 +76,16 @@
   - Ensure `isStubContent()` and dedup guards are active in `doc-analyzer.ts`
 - **Prevention**: `isStubContent()` filters files with no exports/imports; `applyDocUpdate()` checks for existing entries
 
+### 10. Defender ClickFix Heuristic
+- **Symptom**: Windows Security flags a PowerShell command as a severe threat
+- **Cause**: The command downloads an archive into a temp folder and expands it before inspection
+- **Recovery**:
+  - Do not rerun the download-and-expand path
+  - Prefer `.\scripts\safe-review-copy.ps1` or `.\scripts\safe-review-copy.ps1 -Archive`
+  - Keep the review copy local so Defender does not see a download-to-execute pattern
+- **Prevention**: Avoid `Invoke-WebRequest ... | Expand-Archive` review flows for GitHub repos
+- **Note**: In this repo, the alert was treated as a false positive after the source tree and a fresh ZIP scan came back clean
+
 ---
 
 ## Error Patterns
