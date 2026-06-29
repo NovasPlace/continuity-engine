@@ -33,6 +33,49 @@ describe('EvidenceVault', () => {
   });
 });
 
+describe('EvidenceVault retention', () => {
+  it('prunes evidence files older than maxAgeDays', async () => {
+    const root = await tempRoot();
+    try {
+      const oldDate = new Date('2025-01-01T00:00:00Z');
+      const newDate = new Date('2026-06-29T00:00:00Z');
+      const vault = new EvidenceVault({ rootDir: root, now: () => newDate, maxAgeDays: 30 });
+
+      await vault.store({ command: 'old-cmd', cwd: root, exitCode: 0, stdout: 'old', startedAt: oldDate.toISOString(), endedAt: oldDate.toISOString() });
+
+      const { promises: fsp } = await import('fs');
+      const files = await fsp.readdir(root);
+      for (const file of files) {
+        if (file.includes('old-cmd')) {
+          await fsp.utimes(join(root, file), oldDate, oldDate);
+        }
+      }
+
+      await vault.store({ command: 'new-cmd', cwd: root, exitCode: 0, stdout: 'new' });
+
+      const result = await vault.pruneOldEvidence();
+      assert.ok(result.deleted >= 1, `expected at least 1 deletion, got ${result.deleted}`);
+      assert.ok(result.remaining >= 1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps recent evidence under maxAgeDays', async () => {
+    const root = await tempRoot();
+    try {
+      const now = new Date('2026-06-29T00:00:00Z');
+      const vault = new EvidenceVault({ rootDir: root, now: () => now, maxAgeDays: 30 });
+      await vault.store({ command: 'recent-cmd', cwd: root, exitCode: 0, stdout: 'recent' });
+      const result = await vault.pruneOldEvidence();
+      assert.equal(result.deleted, 0);
+      assert.ok(result.remaining >= 1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('ToolOutputDistiller', () => {
   it('keeps failure lines while storing full raw output in the vault', async () => {
     const root = await tempRoot();

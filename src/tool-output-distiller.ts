@@ -32,9 +32,9 @@ export class ToolOutputDistiller {
 
   async distill(input: ShellOutputInput): Promise<DistilledShellOutput> {
     const record = await this.vault.store(input);
-    const allLines = lines(`${input.stdout}\n${input.stderr ?? ''}`);
-    const failureLines = findFailureLines(allLines, input.maxFailureLines ?? 12);
-    const tail = allLines.slice(-(input.maxTailLines ?? 8));
+   const allLines = lines(`${input.stdout}\n${input.stderr ?? ''}`);
+   const failureLines = findFailureLines(allLines, input.maxFailureLines ?? 20);
+   const tail = allLines.slice(-(input.maxTailLines ?? 12));
     const status = input.exitCode === 0 ? 'success' : 'failure';
     const summary = buildSummary(input.command, status, input.exitCode, failureLines, tail);
     const promptTokens = estimateTokens(summary);

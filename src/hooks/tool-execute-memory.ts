@@ -1,6 +1,6 @@
 import type { PluginContext } from '../plugin-context.js';
 import { flushDocUpdates, getPendingUpdates, queueDocUpdate } from './auto-docs.js';
-import { packageCommandEvidence } from './tool-execute-budget.js';
+import { packageCommandEvidence, packageToolEvidence } from './tool-execute-budget.js';
 
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 const FLUSH_DELAY_MS = 2000;
@@ -49,6 +49,8 @@ export async function logToolUsage(
   output: any,
   sid: string | null,
 ): Promise<void> {
+  const packagedToolMetadata = await packageToolEvidence(ctx, input, output);
+
   if (shouldLogTool(input.tool)) {
     await ctx.memoryManager.saveMemory({
       content: `Tool used: ${input.tool}`,
@@ -62,6 +64,9 @@ export async function logToolUsage(
         outputPreview: typeof output.output === 'string'
           ? output.output.substring(0, 200)
           : 'non-string output',
+        contextBudget: packagedToolMetadata?.contextBudget,
+        evidenceRef: packagedToolMetadata?.evidenceRef,
+        tokensAvoided: packagedToolMetadata?.tokensAvoided,
       },
       sessionId: sid ?? undefined,
     });

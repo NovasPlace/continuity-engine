@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { packageCommandEvidence } from '../src/hooks/tool-execute-budget.js';
+import { packageCommandEvidence, packageToolEvidence } from '../src/hooks/tool-execute-budget.js';
 import type { PluginContext } from '../src/plugin-context.js';
 
 let tempDir: string;
@@ -48,5 +48,41 @@ describe('tool execute budget adapter', () => {
     );
 
     assert.equal(metadata, null);
+  });
+
+  it('packages read output as compact evidence metadata', async () => {
+    const metadata = await packageToolEvidence(
+      context(),
+      { tool: 'read', args: { filePath: 'src/index.ts' } },
+      {
+        output: Array.from({ length: 90 }, (_, index) => `const line${index} = value${index};`).join('\n'),
+        metadata: { exitCode: 0 },
+      },
+    );
+
+    assert.ok(metadata);
+    assert.equal(metadata.tool, 'read');
+    assert.equal(metadata.command, 'read src/index.ts');
+    assert.equal(typeof metadata.evidenceRef, 'string');
+    assert.equal((metadata.tokensAvoided as number) > 0, true);
+    assert.match(String(metadata.promptPayload), /evidence_ref:/);
+    assert.doesNotMatch(String(metadata.promptPayload), /const line0 = value0;/);
+  });
+
+  it('packages grep output as compact evidence metadata', async () => {
+    const metadata = await packageToolEvidence(
+      context(),
+      { tool: 'grep', args: { pattern: 'TODO', path: 'src' } },
+      {
+        output: Array.from({ length: 40 }, (_, index) => `src/file${index}.ts:${index}: TODO item ${index}`).join('\n'),
+        metadata: { exitCode: 0 },
+      },
+    );
+
+    assert.ok(metadata);
+    assert.equal(metadata.tool, 'grep');
+    assert.match(String(metadata.command), /^grep TODO src$/);
+    assert.equal(typeof metadata.evidenceRef, 'string');
+    assert.equal((metadata.tokensAvoided as number) > 0, true);
   });
 });
