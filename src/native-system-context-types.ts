@@ -4,7 +4,21 @@
  * TypeScript definitions for the provenance-aware context generation system
  */
 
-import { MemoryRecord, MemoryContextResult } from './memory-manager';
+import type { Memory } from './types.js';
+
+export type MemoryRecord = Partial<Memory> & {
+  source_kind?: string
+  evidence_strength?: string
+  source_session_id?: string
+  source_agent_id?: string
+  source_model_id?: string
+  source_surface?: string
+  derivative_of?: string
+  session_id?: string
+  memory_type?: string
+  created_at?: string
+  [key: string]: unknown
+}
 
 /**
  * Governance eligibility categories
@@ -71,75 +85,6 @@ export interface ProvenanceCompletenessCheck {
   missing_fields: string[]
   gap_reason: string
   is_governance_eligible: boolean
-}
-
-/**
- * Native SystemContext.Source class definition
- */
-export class NativeSystemContextSource {
-  /**
-   * Apply provenance filtering to memory records
-   * 
-   * @param records - Memory records to filter
-   * @param checkGovernanceCompleteness - Function to check governance eligibility
-   * @returns Categorized context records
-   */
-  static applyProvenanceFilter(
-    records: MemoryRecord[],
-    checkGovernanceCompleteness: (record: MemoryRecord) => ProvenanceCompletenessCheck
-  ): ProvenanceFilterResult
-
-  /**
-   * Generate native context output from memory recall results
-   * 
-   * @param records - Memory records to generate context from
-   * @param checkGovernanceCompleteness - Function to check governance eligibility
-   * @returns Structured context output with categorization
-   */
-  static generateContext(
-    records: MemoryRecord[],
-    checkGovernanceCompleteness: (record: MemoryRecord) => ProvenanceCompletenessCheck
-  ): NativeContextSourceOutput
-
-  /**
-   * Calculate provenance completeness percentage
-   * 
-   * @param filterResult - Categorized filter result
-   * @returns Completeness score (0-100)
-   */
-  private static calculateCompleteness(filterResult: ProvenanceFilterResult): number
-
-  /**
-   * Create governance constraint from governance_eligible record
-   * 
-   * @param record - Governance eligible record
-   * @returns Governance constraint statement
-   */
-  static createGovernanceConstraint(record: CategorizedContextRecord): string
-
-  /**
-   * Create context only statement from context_only record
-   * 
-   * @param record - Context only record
-   * @returns Context statement
-   */
-  static createContextStatement(record: CategorizedContextRecord): string
-
-  /**
-   * Create gap statement from missing provenance record
-   * 
-   * @param record - Gap record
-   * @returns Gap statement
-   */
-  static createGapStatement(record: CategorizedContextRecord): string
-
-  /**
-   * Create blocked governance statement from blocked record
-   * 
-   * @param record - Blocked record
-   * @returns Blocked statement
-   */
-  static createBlockedStatement(record: CategorizedContextRecord): string
 }
 
 /**
