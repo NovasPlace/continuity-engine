@@ -1,13 +1,22 @@
 # scripts
 
-Auto-generated documentation for `Desktop\cross-session-memory\scripts`
+Utility scripts for the Cross-Session Memory plugin.
 
-## Overview
-This directory was detected by the Cross-Session Memory plugin's subconscious watcher.
+## Scripts
 
-## Contents
-- Files and subdirectories will be documented here as they are added.
+### backfill-provenance.mjs
+Backfills provenance metadata (`source_kind`, `evidence_strength`, `source_surface`, `source_agent_id`) on existing memories that lack it. Idempotent — safe to re-run.
 
-## Auto-Documentation
-This README is maintained by the auto-docs system. When files are added to this directory, they will be automatically documented in the central SYSTEM_MAP.md and CHANGELOG_LIVE.md.
+```bash
+node scripts/backfill-provenance.mjs --dry-run  # Preview changes
+node scripts/backfill-provenance.mjs             # Apply changes
+```
 
+### safe-review-copy.ps1
+PowerShell script for safely copying files with review.
+
+## Usage
+Scripts are run from the project root:
+```bash
+node scripts/<script>.mjs
+```

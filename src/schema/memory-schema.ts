@@ -128,6 +128,14 @@ export async function initializeMemorySchema(pool: DatabasePool): Promise<void> 
   }
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_memories_created_ttl ON memories(created_at)`);
 
+  // Partial unique index to prevent duplicate transcript captures (defense against
+  // multiple plugin instances or dual event hooks capturing the same message twice).
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_memories_transcript_msg
+    ON memories (session_id, (metadata->>'messageId'))
+    WHERE memory_type = 'conversation' AND metadata ? 'fullTranscript'
+  `);
+
   try {
     await pool.query(
       `ALTER TABLE memories ADD COLUMN IF NOT EXISTS search_vector tsvector

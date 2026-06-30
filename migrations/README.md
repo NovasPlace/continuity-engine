@@ -1,13 +1,19 @@
 # migrations
 
-Auto-generated documentation for `Desktop\cross-session-memory\migrations`
+SQL migration files for the Cross-Session Memory plugin database schema.
 
-## Overview
-This directory was detected by the Cross-Session Memory plugin's subconscious watcher.
+## Migrations
 
-## Contents
-- Files and subdirectories will be documented here as they are added.
+### add_agent_work_journal.sql
+Creates the `agent_work_journal` table for live incremental capture of agent work state. Allows fresh sessions to resume exactly where the last session left off.
 
-## Auto-Documentation
-This README is maintained by the auto-docs system. When files are added to this directory, they will be automatically documented in the central SYSTEM_MAP.md and CHANGELOG_LIVE.md.
+**Table**: `agent_work_journal`
+- Tracks tool calls, decisions, file changes, errors, milestones, and session ends
+- Stores intent, target, result summary, files touched, and token snapshots
+- Indexed on `session_id` for fast resume queries
 
+## Usage
+Migrations are applied automatically during schema initialization. Manual application:
+```bash
+$env:PGPASSWORD="opencode_memory"; & "C:\Program Files\PostgreSQL\17\bin\psql.exe" -h localhost -p 5432 -U opencode_memory -d opencode_memory -f migrations/<migration>.sql
+```

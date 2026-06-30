@@ -30,7 +30,7 @@ export class SubconsciousWatcher {
 
   // Structural directories that should never get an auto-generated README
   private static readonly STRUCTURAL_DIRS = new Set([
-    'src', 'test', 'tests', 'docs', 'plugins', 'migrations',
+    'src', 'test', 'tests', 'docs', 'plugins', 'migrations', 'scripts',
   ]);
 
   private static readonly BUILD_FILE_PATTERNS = [

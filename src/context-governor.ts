@@ -40,6 +40,16 @@ interface MessageLike {
 }
 
 function chooseAction(total: number, projected: number, budget: number, thresholds: { lightBrief: number; compactToolCalls: number; checkpointRefsOnly: number; distilledStateOnly: number; emergencyRebuild: number }): GovernorActionName {
+  console.log('[CSM Governor] chooseAction:', {
+    total,
+    projected,
+    budget,
+    budgetTimes1Point45: budget * 1.45,
+    emergencyRebuildThreshold: thresholds.emergencyRebuild,
+    totalVsEmergencyRebuild: total >= thresholds.emergencyRebuild,
+    totalVsBudget1Point45: total > budget * 1.45,
+    projectedVsEmergencyRebuild: projected >= thresholds.emergencyRebuild,
+  });
   if (projected >= thresholds.emergencyRebuild || total > budget * 1.45) return 'emergency_context_rebuild';
   if (projected >= thresholds.distilledStateOnly) return 'distilled_project_state';
   if (projected >= thresholds.checkpointRefsOnly) return 'checkpoint_refs_only';
@@ -145,6 +155,18 @@ export class AdaptiveContextGovernor {
     const before = measureGovernorMetrics(messages, projectedGrowth);
     const thresholds = getThresholds(this.governorConfig);
     const action = chooseAction(before.totalTokens, before.projectedNextTurnTokens, profile.maxBudget, thresholds);
+    
+    // Diagnostic logging
+    console.log('[CSM Governor] DIAGNOSTIC:', {
+      totalTokens: before.totalTokens,
+      projectedNextTurn: before.projectedNextTurnTokens,
+      profileMaxBudget: profile.maxBudget,
+      profileTargetBudget: profile.targetBudget,
+      profileName: profile.name,
+      thresholds,
+      action,
+      messageCount: messages.length,
+    });
     const decision: GovernorDecision = {
       profile: profile.name,
       action,

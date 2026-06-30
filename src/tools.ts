@@ -618,7 +618,8 @@ export function memoryDistillTool(
           : groupsJson;
         await pool.query(
           `INSERT INTO distilled_summaries (id, session_id, groups, compressed, total_calls_summarized)
-           VALUES ($1, $2, $3, $4, $5)`,
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (session_id, md5(compressed)) DO NOTHING`,
           [
             summary.id,
             context.sessionID,
