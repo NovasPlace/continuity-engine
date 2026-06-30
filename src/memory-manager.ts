@@ -144,7 +144,30 @@ async saveMemory(options: MemorySaveOptions): Promise<Memory> {
       }
 
       const pool = this.database.getPool();
-      
+
+      // Dedup guard for transcript memories: if this exact message was already
+      // captured (e.g. by a second plugin instance or a dual event hook), return
+      // the existing memory instead of inserting a duplicate.
+      const transcriptMsgId = options.metadata?.messageId;
+      const isTranscript = options.type === 'conversation'
+        && options.metadata?.fullTranscript === true
+        && transcriptMsgId != null
+        && options.sessionId != null;
+      if (isTranscript) {
+        const existing = await pool.query(
+          `SELECT * FROM memories
+           WHERE session_id = $1
+             AND memory_type = 'conversation'
+             AND metadata ? 'fullTranscript'
+             AND metadata->>'messageId' = $2
+           LIMIT 1`,
+          [options.sessionId, String(transcriptMsgId)],
+        );
+        if (existing.rows.length > 0) {
+          return this.mapMemory(existing.rows[0] as Record<string, unknown>);
+        }
+      }
+
       // Phase 18 — Redact content BEFORE any processing (concepts, embeddings, storage)
       let contentToProcess = options.content;
       if (this.redactor) {
@@ -192,27 +215,49 @@ async saveMemory(options: MemorySaveOptions): Promise<Memory> {
       }
   
       // Insert memory with embedding
-      const result = await pool.query(
-        `INSERT INTO memories (
-          session_id, project_id, memory_type, content, importance, emotion,
-          confidence, source, tags, linked_memory_ids, metadata, embedding
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-         RETURNING *`,
-        [
-          options.sessionId,
-          projectId,
-          options.type,
-          contentToProcess,
-          options.importance ?? 0.5,
-          options.emotion ?? 'neutral',
-          options.confidence ?? 1.0,
-          options.source ?? 'manual',
-          mergedTags,
-          options.linkedMemoryIds ?? [],
-          mergedMetadata,
-          embedding ? `[${embedding.join(',')}]` : null,
-        ]
-      );
+      let result;
+      try {
+        result = await pool.query(
+          `INSERT INTO memories (
+            session_id, project_id, memory_type, content, importance, emotion,
+            confidence, source, tags, linked_memory_ids, metadata, embedding
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+           RETURNING *`,
+          [
+            options.sessionId,
+            projectId,
+            options.type,
+            contentToProcess,
+            options.importance ?? 0.5,
+            options.emotion ?? 'neutral',
+            options.confidence ?? 1.0,
+            options.source ?? 'manual',
+            mergedTags,
+            options.linkedMemoryIds ?? [],
+            mergedMetadata,
+            embedding ? `[${embedding.join(',')}]` : null,
+          ]
+        );
+      } catch (error: unknown) {
+        // Backstop: race condition between two plugin instances can trigger a
+        // unique violation on idx_memories_transcript_msg. Fetch and return the
+        // already-stored memory instead of failing the capture.
+        if (isTranscript && (error as { code?: string }).code === '23505') {
+          const existing = await pool.query(
+            `SELECT * FROM memories
+             WHERE session_id = $1
+               AND memory_type = 'conversation'
+               AND metadata ? 'fullTranscript'
+               AND metadata->>'messageId' = $2
+             LIMIT 1`,
+            [options.sessionId, String(transcriptMsgId)],
+          );
+          if (existing.rows.length > 0) {
+            return this.mapMemory(existing.rows[0] as Record<string, unknown>);
+          }
+        }
+        throw error;
+      }
   
       const memory = this.mapMemory(result.rows[0] as Record<string, unknown>);
   

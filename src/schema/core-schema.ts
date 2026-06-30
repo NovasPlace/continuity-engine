@@ -15,6 +15,14 @@ export async function initializeCoreSchema(pool: DatabasePool): Promise<void> {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_distilled_summaries_session ON distilled_summaries(session_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_distilled_summaries_built ON distilled_summaries(built_at DESC)`);
 
+  // Defense-in-depth: prevent duplicate distilled summaries (e.g. from multiple
+  // plugin instances). Two summaries with identical compressed text in the same
+  // session are collapsed via ON CONFLICT DO NOTHING on this hash index.
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_distilled_summaries_dedup
+    ON distilled_summaries (session_id, md5(compressed))
+  `);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS compaction_metrics (
       id BIGSERIAL PRIMARY KEY,
